@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Cart</title>
+    <style>
+        h1 {
+            text-align: center;
+        }
+
+        section {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Welcome, <%= user.name %>
+    </h1>
+    <section>
+        <div>
+            Connect your cart
+        </div>
+        <form action="/connectCart" method="POST">
+            <input type="number" id="cartid" name="cartid" placeholder="Cart ID">
+            <button>Connect</button>
+        </form>
+        <div id="error">
+            <%=error%>
+        </div>
+    </section>
+</body>
+
+</html>

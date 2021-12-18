@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Interface</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <form action="/logout" method="POST">
+                <button>Logout</button>
+            </form>
+        </nav>
+    </header>
+    <section>
+
+    </section>
+    <script>
+        const ws = new WebSocket("ws://localhost:8080");
+        let products = [];
+        function displayCartEmpty() {
+            const section = document.querySelector('section');
+            section.innerHTML = "Cart is empty";
+            section.style.textAlign = "center";
+        }
+        if (products.length == 0) {
+            displayCartEmpty();
+        }
+
+        function createTable() {
+            document.querySelector('section').innerHTML = ``;
+            const table = document.createElement('table');
+            const tr = document.createElement('tr');
+            const sno = document.createElement('th');
+            const item = document.createElement('th');
+            const price = document.createElement('th');
+            sno.innerText = "S. No.";
+            item.innerText = "Item";
+            price.innerHTML = "Price";
+            tr.id = "tableHeader";
+            tr.append(sno);
+            tr.append(item);
+            tr.append(price);
+            table.append(tr);
+            document.querySelector('section').append(table);
+        }
+        function displayProducts() {
+            if (products.length == 0) {
+                displayCartEmpty();
+            } else {
+                createTable();
+                for (let product of products) {
+                    const tr = document.createElement('tr');
+                    const sno = document.createElement('td');
+                    const item = document.createElement('td');
+                    const price = document.createElement('td');
+                    tr.id = `${product.id}`;
+                    sno.innerText = `${products.indexOf(product) + 1}`;
+                    item.innerText = `${product.data.name}`;
+                    price.innerText = `${product.data.price}`;
+                    tr.append(sno);
+                    tr.append(item);
+                    tr.append(price);
+                    document.querySelector('table').append(tr);
+                }
+            }
+        }
+        ws.addEventListener('open', () => {
+            console.log("We are connected");
+            ws.addEventListener('message', e => {
+                const product = JSON.parse(e.data);
+                const keys = Object.keys(product);
+                if (keys.length == 0) {
+                    displayCartEmpty();
+                } else {
+                    products = [];
+                    for (let key of keys) {
+                        products.push(product[key]);
+                    }
+                    displayProducts();
+                }
+
+            });
+        });
+    </script>
+</body>
+
+</html>
