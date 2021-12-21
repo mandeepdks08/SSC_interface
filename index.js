@@ -26,15 +26,14 @@ const {
   signOut,
 } = require("firebase/auth");
 const firebaseConfig = {
-  apiKey: "AIzaSyBnFBTimV12rTPKjRZ4wn8HkLrsLk5-7E8",
-  authDomain: "cart-e2732.firebaseapp.com",
+  apiKey: "AIzaSyDsJVrQpZA8OcCmWk3X19-A2l8ZMy5aVm0",
+  authDomain: "smartcart-eb460.firebaseapp.com",
   databaseURL:
-    "https://cart-e2732-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "cart-e2732",
-  storageBucket: "cart-e2732.appspot.com",
-  messagingSenderId: "91406675401",
-  appId: "1:91406675401:web:a11fed29eec28cd7d34c18",
-  measurementId: "G-S1SX5VKC07",
+    "https://smartcart-eb460-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smartcart-eb460",
+  storageBucket: "smartcart-eb460.appspot.com",
+  messagingSenderId: "831156107896",
+  appId: "1:831156107896:web:6a669855c81227398c4b8d",
 };
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase();
@@ -45,27 +44,41 @@ const auth = getAuth();
 const { WebSocketServer } = require("ws");
 const wss = new WebSocketServer({ port: 8080 });
 wss.on("connection", (ws) => {
-  console.log("User joined!");
-
-  //onValue fn. triggers whenever there are changes in the specified path
-  onValue(ref(db, "/carts/cart1/products"), (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      ws.send(JSON.stringify(data));
-    } else {
-      ws.send(JSON.stringify({}));
+  onValue(ref(db, "/carts/cart_101"), async (snapshot) => {
+    let products = {};
+    snapshot = snapshot.val();
+    let items = snapshot["items"];
+    const deletedItems = snapshot["deleted_tems"];
+    const key = (deletedItems == null) ? null : Object.keys(deletedItems)[0];
+    if (key) {
+      for (let item in items) {
+        if (items[item] == deletedItems[key]) {
+          delete items[item];
+          delete deletedItems[key];
+          break;
+        }
+      }
+      if (items) {
+        set(ref(db, "/carts/cart_101/items"), items);
+      }
+      set(ref(db, "/carts/cart_101/deleted_tems"), {});
     }
-  });
-
-  //This fn. runs when a socket disconnects
-  ws.on("close", () => {
-    console.log("User left :(");
+    for (let item in items) {
+      await get(ref(db, `/productData/${items[item]}`))
+        .then((snapshot) => {
+          products[item] = snapshot.val();
+          console.log(products);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+    ws.send(JSON.stringify(products));
   });
 });
 //******************************************* */
 
 //Renders home page, i.e., login page
-//Also checks for email and id, and if provided, tries to log-in the user
 app.get("/", async (req, res) => {
   res.render("index", { error: "" });
 });
@@ -121,11 +134,11 @@ app.post("/signUp", async (req, res) => {
 //
 app.post("/connectCart", async (req, res) => {
   const { cartid } = req.body;
-  await get(ref(db, `/carts/cart${cartid}`))
+  await get(ref(db, `/carts/cart_${cartid}`))
     .then(async (snapshot) => {
       snapshot = snapshot.val();
       if (snapshot.isAvailable) {
-        await set(ref(db, `/carts/cart${cartid}/isAvailable`), false)
+        await set(ref(db, `/carts/cart_${cartid}/isAvailable`), false)
           .then(() => {
             res.render("cartInterface");
           })
@@ -136,7 +149,8 @@ app.post("/connectCart", async (req, res) => {
       } else {
         res.render("connectCart", {
           user: { name: "Elon Musk" },
-          error: "Cart already in use! (manually set isAvailable: true on firebase)",
+          error:
+            "Cart already in use! (manually set isAvailable: true on firebase)",
         });
       }
     })
@@ -152,8 +166,8 @@ app.post("/connectCart", async (req, res) => {
 app.post("/logout", async (req, res) => {
   signOut(auth)
     .then(async () => {
-      await set(ref(db, "/carts/cart1/isAvailable"), true);
-      await set(ref(db, "/carts/cart1/products"), {})
+      await set(ref(db, "/carts/cart_101/isAvailable"), true);
+      await set(ref(db, "/carts/cart_101/items"), {})
         .then(() => {
           res.redirect("/");
         })

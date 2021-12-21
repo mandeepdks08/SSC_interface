@@ -58,10 +58,10 @@
                     const sno = document.createElement('td');
                     const item = document.createElement('td');
                     const price = document.createElement('td');
-                    tr.id = `${product.id}`;
+                    // tr.id = `${product.id}`;
                     sno.innerText = `${products.indexOf(product) + 1}`;
-                    item.innerText = `${product.data.name}`;
-                    price.innerText = `${product.data.price}`;
+                    item.innerText = `${product.name}`;
+                    price.innerText = `${product.price}`;
                     tr.append(sno);
                     tr.append(item);
                     tr.append(price);
@@ -81,6 +81,7 @@
                     for (let key of keys) {
                         products.push(product[key]);
                     }
+                    console.log(products);
                     displayProducts();
                 }
 
