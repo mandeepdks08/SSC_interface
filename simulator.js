@@ -43,7 +43,7 @@ async function simulator() {
     while(true) {
         let num = Math.floor(Math.random()*10);
         
-        if(num < 7) {
+        if(num < 8) {
             const index = Math.floor(Math.random()*8);
             if(shoppedItems.indexOf(items[index]) != -1) {
                 continue;
