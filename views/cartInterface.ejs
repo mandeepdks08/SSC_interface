@@ -1,44 +1,230 @@
-<!DOCTYPE html>
-<html lang="en">
+<% layout("layouts/boilerplate") %>
+<!-- Modal -->
+<div
+  class="modal fade"
+  id="exampleModal"
+  tabindex="-1"
+  aria-labelledby="exampleModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title m-auto" id="exampleModalLabel">Pair Cart</h5>
+      </div>
+      <div class="modal-body m-auto">
+        <div class="text-center">Your pairing code</div>
+        <div
+          id="pairing-code"
+          class="display-4 text-center text-danger mb-2"
+        ></div>
+        <div class="text-center fw-bold mb-2">Or</div>
+        <form action="/cart/pair" method="post" id="pair-cart-form">
+          <button class="btn btn-sm btn-primary ms-1" style="float: right">
+            Go
+          </button>
+          <div style="overflow: hidden">
+            <input
+              type="number"
+              class="form-control form-control-sm"
+              placeholder="Enter pairing code here"
+              id="pair-cart-input"
+              name="pair-cart-input"
+            />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm m-auto"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Close -->
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cart Interface</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <style>
-        .bold {
-            font-weight: bold;
-        }
+<div class="container mt-3 d-none" id="select-container">
+  <div class="row mb-3">
+    <div class="col-4">
+      <select
+        class="form-select form-select-sm form-control"
+        id="select-cart"
+        onchange="displayCartItems()"
+      >
+        <option value="user1">Karan</option>
+        <option value="user2">Swati</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+    <div id="user1-colour" class="col-3 d-none">
+      Karan
+      <input
+        type="checkbox"
+        class="btn-check"
+        id="btn-check-2-outlined"
+        checked
+        autocomplete="off"
+      />
+      <label class="btn btn-outline-success" for="btn-check-2-outlined"></label>
+    </div>
+    <div id="user2-colour" class="col-3 d-none">
+      Swati
+      <input
+        type="checkbox"
+        class="btn-check"
+        id="btn-check-3-outlined"
+        checked
+        autocomplete="off"
+      />
+      <label class="btn btn-outline-danger" for="btn-check-3-outlined"></label>
+    </div>
+  </div>
+</div>
 
-        .font-size-150 {
-            font-size: 150%;
-        }
-    </style>
-</head>
+<section class="container"></section>
 
-<body>
-    <header>
-        <nav class="navbar navbar-dark bg-dark">
-            <div class="container-fluid justify-content-end">
-                <form action="/logout" method="POST" class="d-flex">
-                    <button class="btn btn-light btn-sm">Logout</button>
-                </form>
-                <form action="/checkout" method="GET" onclick="checkout()" class="d-flex ms-2">
-                    <button class="btn btn-light btn-sm">Checkout</button>
-                </form>
-            </div>
-        </nav>
-    </header>
-    <section class="container">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    onValue,
+    get,
+    child,
+    push,
+    set,
+  } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-database.js";
+  import {
+    getFirestore,
+    getDoc,
+    doc,
+  } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-firestore.js";
 
-    </section>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-        crossorigin="anonymous"></script>
-    <script src="./cartInterface.js"></script>
-</body>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWjqFGL8j_JRMLbrpuwE_mblIJc1GnFX0",
+    authDomain: "auth-demo-4efba.firebaseapp.com",
+    databaseURL:
+      "https://auth-demo-4efba-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "auth-demo-4efba",
+    storageBucket: "auth-demo-4efba.appspot.com",
+    messagingSenderId: "586847569783",
+    appId: "1:586847569783:web:c68c943c0be0e84d3a8372",
+  };
 
-</html>
+  const app = initializeApp(firebaseConfig);
+  const realDB = getDatabase(app);
+  const db = getFirestore(app);
+
+  let email = "<%-user.email%>";
+
+  function displayCartEmpty() {
+    const section = document.querySelector("section");
+    section.innerHTML = "Cart is empty";
+    section.classList.add("text-center", "display-6");
+  }
+
+  displayCartEmpty();
+
+  function createTable() {
+    const section = document.querySelector("section");
+    section.classList.remove("text-center", "display-6");
+
+    section.innerHTML = `
+        <table class="table">
+            <thead class="thead-dark">
+                <tr id="tableHeader">
+                    <th scope="col">#</th>    
+                    <th scope="col">Item</th>    
+                    <th scope="col">Price</th>    
+                </tr>   
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    `;
+  }
+
+  function displayProducts(products) {
+    if (products.length == 0) return displayCartEmpty();
+
+    createTable();
+    let total = 0;
+    let i = 1;
+    let html = ``;
+    for (let product of products) {
+      html += `
+        <tr>
+            <td scope="row">${i}</td>    
+            <td>${product.name}</td>    
+            <td>${product.price}</td>    
+        </tr>
+      `;
+      total += product.price;
+      i++;
+    }
+    html += `
+        <tr>
+            <td></td>
+            <th class="bold text-end">Total</th>
+            <th class="bold">&#8377; ${total}</th>
+        </tr>
+    `;
+    document.querySelector("tbody").innerHTML = html;
+  }
+
+  async function getCartID() {
+    let cartid = -1;
+    await get(
+      child(ref(realDB), `/currentUsers/${email.slice(0, email.indexOf("@"))}`)
+    )
+      .then((snapshot) => {
+        if (!snapshot.exists()) window.location.assign("/cart/connect");
+        cartid = snapshot.val();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    return cartid;
+  }
+
+  const cartID = await getCartID();
+  if (cartID == -1) window.location.assign("/cart/connect");
+
+  onValue(ref(realDB, `/carts/${cartID}/products`), async (snapshot) => {
+    if (!snapshot.exists()) return displayCartEmpty();
+    const productIds = snapshot.val();
+    const products = [];
+    for (let productId in productIds) {
+      const docRef = doc(db, "products", productIds[productId]);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const product = docSnap.data();
+        products.push(product);
+      }
+    }
+    displayProducts(products);
+  });
+
+  const pairCartForm = document.querySelector("#pair-cart-form");
+  pairCartForm.addEventListener("submit", (e) => {
+    const pairingCode = pairCartForm["pair-cart-input"].value;
+    if (pairingCode.toString().length == 6) pairCartForm.submit();
+  });
+
+  const pairCartModal = document.querySelector("#pair-cart-modal");
+  pairCartModal.addEventListener("click", async (e) => {
+    e.preventDefault();
+    let genCode = 0;
+    for (let i = 0; i < 6; i++) {
+      genCode = genCode * 10 + Math.floor(Math.random() * 10);
+    }
+    document.querySelector("#pairing-code").innerHTML = `${genCode}`;
+    await set(child(ref(realDB), `/pairingCodes/${genCode}`), cartID);
+  });
+</script>

@@ -1,0 +1,44 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Smart Cart</a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNavAltMarkup"
+      aria-controls="navbarNavAltMarkup"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav ms-auto">
+        <% if(typeof(user) != "undefined") { %>
+            <form class="d-flex d-none" id="pair-cart-modal">
+              <button
+                type="button"
+                class="btn btn-link nav-link"
+                data-bs-toggle="modal"
+                data-bs-target="#exampleModal"
+                id="pair-cart-button"
+              >
+                Pair Cart
+              </button>
+            </form>
+        <a class="nav-link d-none" id="checkout-link" href="/cart/checkout">Checkout</a>
+        <a class="nav-link" href="/logout">Logout</a>
+         <% } else { %>
+        <a class="nav-link" aria-current="page" href="/login">Login</a>
+        <a class="nav-link" href="/register">Register</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</nav>
+<script>
+  if(window.location.pathname.toString() == "/cart/interface") {
+    document.querySelector("#checkout-link").classList.remove("d-none");
+    document.querySelector("#pair-cart-modal").classList.remove("d-none");
+  }
+</script>

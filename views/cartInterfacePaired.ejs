@@ -1,0 +1,309 @@
+<% layout("layouts/boilerplate") %>
+<!-- Modal -->
+<div
+  class="modal fade"
+  id="exampleModal"
+  tabindex="-1"
+  aria-labelledby="exampleModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title m-auto" id="exampleModalLabel">Pair Cart</h5>
+      </div>
+      <div class="modal-body m-auto">
+        <div class="text-center">Your pairing code</div>
+        <div id="pairing-code" class="display-4 text-center text-danger mb-2">
+          764379
+        </div>
+        <div class="text-center fw-bold mb-2">Or</div>
+        <form>
+          <button class="btn btn-sm btn-primary ms-1" style="float: right">
+            Go
+          </button>
+          <div style="overflow: hidden">
+            <input
+              type="number"
+              class="form-control form-control-sm"
+              placeholder="Enter pairing code here"
+            />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm m-auto"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Close -->
+
+<div class="container mt-3" id="select-container">
+  <div class="row mb-3">
+    <div class="col-4">
+      <select class="form-select form-select-sm form-control" id="select-cart">
+        <option value="0">User 1</option>
+        <option value="1">User 2</option>
+        <option value="2">Both</option>
+      </select>
+    </div>
+    <div id="user1-colour" class="col-3 d-none">
+      User 1
+      <input
+        type="checkbox"
+        class="btn-check"
+        id="btn-check-2-outlined"
+        checked
+        autocomplete="off"
+      />
+      <label class="btn btn-outline-success table-success" for="btn-check-2-outlined"></label>
+    </div>
+    <div id="user2-colour" class="col-3 d-none">
+      User 2
+      <input
+        type="checkbox"
+        class="btn-check"
+        id="btn-check-3-outlined"
+        checked
+        autocomplete="off"
+      />
+      <label class="btn btn-outline-danger table-danger" for="btn-check-3-outlined"></label>
+    </div>
+  </div>
+</div>
+
+<section class="container"></section>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    onValue,
+    get,
+    child,
+  } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-database.js";
+  import {
+    getFirestore,
+    getDoc,
+    doc,
+  } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWjqFGL8j_JRMLbrpuwE_mblIJc1GnFX0",
+    authDomain: "auth-demo-4efba.firebaseapp.com",
+    databaseURL:
+      "https://auth-demo-4efba-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "auth-demo-4efba",
+    storageBucket: "auth-demo-4efba.appspot.com",
+    messagingSenderId: "586847569783",
+    appId: "1:586847569783:web:c68c943c0be0e84d3a8372",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const realDB = getDatabase(app);
+  const db = getFirestore(app);
+
+  const email = "<%- user.email %>";
+  console.log("hey");
+
+  async function getCartID() {
+    let cartid = -1;
+    await get(
+      child(ref(realDB), `/currentUsers/${email.slice(0, email.indexOf("@"))}`)
+    )
+      .then((snapshot) => {
+        if (!snapshot.exists()) window.location.assign("/cart/connect");
+        cartid = snapshot.val();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    return cartid;
+  }
+
+  async function getPairedCartID() {
+    let cartid = -1;
+    await get(child(ref(realDB), `/carts/${cartID}/pairedWith`))
+      .then((snapshot) => {
+        if (!snapshot.exists()) return;
+        cartid = snapshot.val();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    return cartid;
+  }
+
+  const cartID = await getCartID();
+  const pairedCartID = await getPairedCartID();
+  let user1Products = [];
+  let user2Products = [];
+  /*
+    selectedCart
+    0 -> User1
+    1 -> User2
+    2 -> Both
+  */
+  let selectedCart = 0;
+
+  function displayCartEmpty() {
+    const section = document.querySelector("section");
+    section.innerHTML = "Cart is empty";
+    section.classList.add("text-center", "display-6");
+  }
+
+  function createTable() {
+    const section = document.querySelector("section");
+    section.classList.remove("text-center", "display-6");
+
+    section.innerHTML = `
+        <table class="table">
+            <thead id="table-header">
+                <tr>
+                    <th scope="col">#</th>    
+                    <th scope="col">Item</th>    
+                    <th scope="col">Price</th>    
+                </tr>   
+            </thead>
+            <tbody id="table-body">
+
+            </tbody>
+            <tfoot id="table-footer">
+
+            </tfoot>
+        </table>
+    `;
+  }
+
+  function buildHTML(products) {
+    if (products.length == 0) return "";
+    let html = ``;
+    let i = 1;
+    let total = 0;
+    for (let product of products) {
+      html += `
+            <tr>
+                <td scope="col" class="fw-bold">${i}</td>
+                <td scope="col">${product.name}</td>
+                <td scope="col">${product.price}</td>
+            </tr>
+        `;
+      total += product.price;
+      i++;
+    }
+    html += `
+        <tfoot>
+            <tr>
+                <td></td>
+                <td scope="col" class="fw-bold text-end">Total</th>
+                <td scope="col" class="fw-bold">&#8377; ${total}</th>
+            </tr>
+        </tfoot>
+    `;
+    return html;
+  }
+
+  function displayHTML(html) {
+    if (html == "") return displayCartEmpty();
+    createTable();
+    document.querySelector("#table-body").innerHTML = html;
+  }
+
+  function displayBothHTML() {
+    if (user1Products.length == 0 && user2Products.length == 0)
+      return displayCartEmpty();
+    createTable();
+    let html = ``;
+    let i = 1;
+    let total = 0;
+    for (let product of user1Products) {
+      html += `
+            <tr class="table-success">
+                <td scope="col" class="fw-bold">${i}</td>
+                <td scope="col">${product.name}</td>
+                <td scope="col">${product.price}</td>
+            </tr>
+          `;
+      total += product.price;
+      i++;
+    }
+    for (let product of user2Products) {
+      html += `
+            <tr class="table-danger">
+                <td scope="col" class="fw-bold">${i}</td>
+                <td scope="col">${product.name}</td>
+                <td scope="col">${product.price}</td>
+            </tr>
+          `;
+      total += product.price;
+      i++;
+    }
+    html += `
+        <tfoot>
+            <tr>
+                <td></td>
+                <td scope="col" class="fw-bold text-end">Total</th>
+                <td scope="col" class="fw-bold">&#8377; ${total}</th>
+            </tr>
+        </tfoot>
+    `;
+    document.querySelector("#table-body").innerHTML = html;
+  }
+
+  onValue(ref(realDB, `/carts/${cartID}/products`), async (snapshot) => {
+    if (!snapshot.exists()) return;
+    const productIds = snapshot.val();
+    user1Products = [];
+    for (let productId in productIds) {
+      const docRef = doc(db, "products", productIds[productId]);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const product = docSnap.data();
+        user1Products.push(product);
+      }
+    }
+    if (selectedCart == 0) displayHTML(buildHTML(user1Products));
+    else if (selectedCart == 2) displayBothHTML();
+  });
+
+  onValue(ref(realDB, `/carts/${pairedCartID}/products`), async (snapshot) => {
+    if (!snapshot.exists()) return;
+    const productIds = snapshot.val();
+    user2Products = [];
+    for (let productId in productIds) {
+      const docRef = doc(db, "products", productIds[productId]);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const product = docSnap.data();
+        user2Products.push(product);
+      }
+    }
+    if (selectedCart == 1) displayHTML(buildHTML(user2Products));
+    else if (selectedCart == 2) displayBothHTML();
+  });
+
+  document
+    .querySelector("#select-cart")
+    .addEventListener("change", runOnSelectChange);
+
+  function runOnSelectChange() {
+    document.querySelector("#user1-colour").classList.add("d-none");
+    document.querySelector("#user2-colour").classList.add("d-none");
+    selectedCart = document.querySelector("select").value;
+    if (selectedCart == 0) displayHTML(buildHTML(user1Products));
+    else if (selectedCart == 1) displayHTML(buildHTML(user2Products));
+    else if (selectedCart == 2) {
+      document.querySelector("#user1-colour").classList.remove("d-none");
+      document.querySelector("#user2-colour").classList.remove("d-none");
+      displayBothHTML();
+    }
+  }
+</script>

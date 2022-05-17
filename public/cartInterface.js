@@ -1,14 +1,11 @@
-const ws = new WebSocket("ws://localhost:8080");
-let products = [];
-let total = 0;
 function displayCartEmpty() {
   const section = document.querySelector("section");
   section.innerHTML = "Cart is empty";
   section.classList.add("text-center", "display-6");
 }
-if (products.length == 0) {
-  displayCartEmpty();
-}
+
+displayCartEmpty();
+
 function createTable() {
   document
     .querySelector("section")
@@ -44,58 +41,69 @@ function createTable() {
   table.append(thead, tbody);
   document.querySelector("section").append(table);
 }
-function displayProducts() {
-  if (products.length == 0) {
-    displayCartEmpty();
-  } else {
-    createTable();
-    total = 0;
-    for (let product of products) {
-      const tr = document.createElement("tr");
-      const sno = document.createElement("th");
-      const item = document.createElement("td");
-      const price = document.createElement("td");
-      sno.innerText = `${products.indexOf(product) + 1}`;
-      item.innerText = `${product.name}`;
-      price.innerText = `${product.price}`;
-      sno.scope = "row";
-      tr.append(sno);
-      tr.append(item);
-      tr.append(price);
-      document.querySelector("tbody").append(tr);
-      total += product.price;
-    }
+
+function displayProducts(products) {
+  if (products.length == 0) return displayCartEmpty();
+
+  createTable();
+  let total = 0;
+  let i = 1;
+  for (let product of products) {
     const tr = document.createElement("tr");
-    const sno = document.createElement("td");
-    const totalLabel = document.createElement("th");
-    const totalPrice = document.createElement("th");
-    totalLabel.innerText = "Total";
-    totalPrice.innerHTML = `&#8377; ${total}`;
-
-    totalLabel.classList.add("bold", "text-end");
-    totalPrice.classList.add("bold");
-
-    tr.append(sno, totalLabel, totalPrice);
+    const sno = document.createElement("th");
+    const item = document.createElement("td");
+    const price = document.createElement("td");
+    sno.innerText = `${i}`;
+    item.innerText = `${product.name}`;
+    price.innerText = `${product.price}`;
+    sno.scope = "row";
+    tr.append(sno);
+    tr.append(item);
+    tr.append(price);
     document.querySelector("tbody").append(tr);
+    total += product.price;
+    i++;
   }
-}
-ws.addEventListener("open", () => {
-  ws.addEventListener("message", (e) => {
-    const product = JSON.parse(e.data);
-    const keys = Object.keys(product);
-    if (keys.length == 0) {
-      displayCartEmpty();
-    } else {
-      products = [];
-      for (let key of keys) {
-        products.push(product[key]);
-      }
-      displayProducts();
-    }
-  });
-});
+  const tr = document.createElement("tr");
+  const sno = document.createElement("td");
+  const totalLabel = document.createElement("th");
+  const totalPrice = document.createElement("th");
+  totalLabel.innerText = "Total";
+  totalPrice.innerHTML = `&#8377; ${total}`;
 
-function checkout() {
-  window.sessionStorage.setItem("billAmount", total);
-  return confirm("Sure you want to checkout?");
+  totalLabel.classList.add("bold", "text-end");
+  totalPrice.classList.add("bold");
+
+  tr.append(sno, totalLabel, totalPrice);
+  document.querySelector("tbody").append(tr);
 }
+
+async function getCartID() {
+  let cartid = -1;
+  await get(child(ref(realDB), `/currentUsers/${user.email}`))
+    .then((snapshot) => {
+      if (!snapshot.exists()) window.location.assign("/cart/connect");
+      cartid = snapshot.val();
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  return cartid;
+}
+
+const cartID = getCartID();
+if (cartID == -1) window.location.assign("/cart/connect");
+
+onValue(ref(db, `/carts/${cartID}/products`), async (snapshot) => {
+  if (!snapshot.exists()) return;
+  const productIds = snapshot.val();
+  const products = [];
+  for (let productId in productIds) {
+    const doc = await db
+      .collection("products")
+      .doc(productIds[productId])
+      .get();
+    if (doc.exists()) products.push(doc.data());
+  }
+  displayProducts(products);
+});
